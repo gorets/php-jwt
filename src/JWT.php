@@ -75,29 +75,14 @@ class JWT
     {
         $timestamp = \is_null(static::$timestamp) ? \time() : static::$timestamp;
 
-        if (empty($key)) {
-            throw new InvalidArgumentException('Key may not be empty');
-        }
-        $tks = \explode('.', $jwt);
-        if (\count($tks) != 3) {
-            throw new UnexpectedValueException('Wrong number of segments');
-        }
-        list($headb64, $bodyb64, $cryptob64) = $tks;
-        if (null === ($header = static::jsonDecode(static::urlsafeB64Decode($headb64)))) {
-            throw new UnexpectedValueException('Invalid header encoding');
-        }
-        if (null === $payload = static::jsonDecode(static::urlsafeB64Decode($bodyb64))) {
-            throw new UnexpectedValueException('Invalid claims encoding');
-        }
-        if (false === ($sig = static::urlsafeB64Decode($cryptob64))) {
-            throw new UnexpectedValueException('Invalid signature encoding');
-        }
-        if (empty($header->alg)) {
-            throw new UnexpectedValueException('Empty algorithm');
-        }
-        if (empty(static::$supported_algs[$header->alg])) {
-            throw new UnexpectedValueException('Algorithm not supported');
-        }
+        $data = static::unpack($jwt);
+
+        $payload = $data['payload'];
+        $header = $data['header'];
+        $sig = $data['sig'];
+        $headb64 = $data['headb64'];
+        $bodyb64 = $data['bodyb64'];
+
         if (!\in_array($header->alg, $allowed_algs)) {
             throw new UnexpectedValueException('Algorithm not allowed');
         }
@@ -145,6 +130,52 @@ class JWT
         }
 
         return $payload;
+    }
+
+    /**
+     * Decodes a JWT string into a PHP array data.
+     *
+     * @param string $jwt The JWT
+     *
+     * @return array The JWT's data as a PHP array
+     *
+     * @throws UnexpectedValueException Provided JWT was invalid
+    */
+    public static function unpack($jwt)
+    {
+        if (empty($key)) {
+            throw new InvalidArgumentException('Key may not be empty');
+        }
+        $tks = \explode('.', $jwt);
+        if (\count($tks) != 3) {
+            throw new UnexpectedValueException('Wrong number of segments');
+        }
+        list($headb64, $bodyb64, $cryptob64) = $tks;
+        if (null === ($header = static::jsonDecode(static::urlsafeB64Decode($headb64)))) {
+            throw new UnexpectedValueException('Invalid header encoding');
+        }
+        if (null === $payload = static::jsonDecode(static::urlsafeB64Decode($bodyb64))) {
+            throw new UnexpectedValueException('Invalid claims encoding');
+        }
+        if (false === ($sig = static::urlsafeB64Decode($cryptob64))) {
+            throw new UnexpectedValueException('Invalid signature encoding');
+        }
+
+        if (empty($header->alg)) {
+            throw new UnexpectedValueException('Empty algorithm');
+        }
+        if (empty(static::$supported_algs[$header->alg])) {
+            throw new UnexpectedValueException('Algorithm not supported');
+        }
+
+        return array(
+            'header' => $header,
+            'payload' => $payload,
+            'sig' => $sig,
+            'headb64' => $headb64,
+            'bodyb64' => $bodyb64,
+            'cryptob64' => $cryptob64,
+        );
     }
 
     /**
