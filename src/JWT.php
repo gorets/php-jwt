@@ -74,6 +74,9 @@ class JWT
     public static function decode($jwt, $key, array $allowed_algs = array())
     {
         $timestamp = \is_null(static::$timestamp) ? \time() : static::$timestamp;
+        if (empty($key)) {
+            throw new InvalidArgumentException('Key may not be empty');
+        }
 
         $data = static::unpack($jwt);
 
@@ -133,7 +136,7 @@ class JWT
     }
 
     /**
-     * Decodes a JWT string into a PHP array data.
+     * Unpack a JWT string into a PHP array data.
      *
      * @param string $jwt The JWT
      *
@@ -143,9 +146,6 @@ class JWT
     */
     public static function unpack($jwt)
     {
-        if (empty($key)) {
-            throw new InvalidArgumentException('Key may not be empty');
-        }
         $tks = \explode('.', $jwt);
         if (\count($tks) != 3) {
             throw new UnexpectedValueException('Wrong number of segments');
